@@ -2,6 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recomposición">
+<meta name="theme-color" content="#1E3A5F">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIlJlY29tcG9zaWNpXHUwMGYzbiBDb3Jwb3JhbCBcdTIwMTQgSGVybmFuIiwgInNob3J0X25hbWUiOiAiUmVjb21wb3NpY2lcdTAwZjNuIiwgImRlc2NyaXB0aW9uIjogIlNlZ3VpbWllbnRvIGRlIHJlY29tcG9zaWNpXHUwMGYzbiBjb3Jwb3JhbDogZ3ltLCBudXRyaWNpXHUwMGYzbiB5IG1cdTAwZTl0cmljYXMgR2FybWluIiwgInN0YXJ0X3VybCI6ICIuIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxRTNBNUYiLCAidGhlbWVfY29sb3IiOiAiIzFFM0E1RiIsICJvcmllbnRhdGlvbiI6ICJwb3J0cmFpdCIsICJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSGRwWkhSb1BTSXhPVElpSUdobGFXZG9kRDBpTVRreUlpQjJhV1YzUW05NFBTSXdJREFnTVRreUlERTVNaUkrQ2lBZ1BISmxZM1FnZDJsa2RHZzlJakU1TWlJZ2FHVnBaMmgwUFNJeE9USWlJSEo0UFNJME1DSWdabWxzYkQwaUl6RkZNMEUxUmlJdlBnb2dJRHgwWlhoMElIZzlJamsySWlCNVBTSXhNekFpSUdadmJuUXRjMmw2WlQwaU1URXdJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWlCbWIyNTBMV1poYldsc2VUMGlRWEJ3YkdVZ1EyOXNiM0lnUlcxdmFta3NVMlZuYjJVZ1ZVa2dSVzF2YW1rc1RtOTBieUJEYjJ4dmNpQkZiVzlxYVN4ellXNXpMWE5sY21sbUlqN3duNUtxUEM5MFpYaDBQZ284TDNOMlp6ND0iLCAic2l6ZXMiOiAiMTkyeDE5MiIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwifSwgeyJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhkcFpIUm9QU0kxTVRJaUlHaGxhV2RvZEQwaU5URXlJaUIyYVdWM1FtOTRQU0l3SURBZ05URXlJRFV4TWlJK0NpQWdQSEpsWTNRZ2QybGtkR2c5SWpVeE1pSWdhR1ZwWjJoMFBTSTFNVElpSUhKNFBTSXhNREFpSUdacGJHdzlJaU14UlROQk5VWWlMejRLSUNBOGRHVjRkQ0I0UFNJeU5UWWlJSGs5SWpNMU1DSWdabTl1ZEMxemFYcGxQU0l6TURBaUlIUmxlSFF0WVc1amFHOXlQU0p0YVdSa2JHVWlJR1p2Ym5RdFptRnRhV3g1UFNKQmNIQnNaU0JEYjJ4dmNpQkZiVzlxYVN4VFpXZHZaU0JWU1NCRmJXOXFhU3hPYjNSdklFTnZiRzl5SUVWdGIycHBMSE5oYm5NdGMyVnlhV1lpUHZDZmtxbzhMM1JsZUhRK0Nqd3ZjM1puUGc9PSIsICJzaXplcyI6ICI1MTJ4NTEyIiwgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSJ9XX0=">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiB2aWV3Qm94PSIwIDAgMTkyIDE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzFFM0E1RiIvPgogIDx0ZXh0IHg9Ijk2IiB5PSIxMzAiIGZvbnQtc2l6ZT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXBwbGUgQ29sb3IgRW1vamksU2Vnb2UgVUkgRW1vamksTm90byBDb2xvciBFbW9qaSxzYW5zLXNlcmlmIj7wn5KqPC90ZXh0Pgo8L3N2Zz4=">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Recomposición Corporal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1596,6 +1603,33 @@ function init() {
 }
 
 init();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE = 'recomposicion-v1';
+const ASSETS = [self.location.href];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+    const clone = res.clone();
+    caches.open(CACHE).then(c => c.put(e.request, clone));
+    return res;
+  }).catch(() => caches.match(e.request))));
+});
+  `;
+  const blob = new Blob([swCode], {type: 'application/javascript'});
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
 </script>
 </body>
 </html>
