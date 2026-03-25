@@ -611,6 +611,12 @@
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
 <div class="section active" id="section-dashboard">
 
+  <div id="debug-panel" style="background:#1a1a2e;color:#00ff88;font-family:'DM Mono',monospace;font-size:11px;padding:12px;border-radius:8px;margin-bottom:1rem;display:none;">
+    <div style="color:#fff;font-weight:600;margin-bottom:6px;font-size:12px;">🔧 Firebase Debug</div>
+    <div id="debug-log" style="line-height:1.8;"></div>
+    <button onclick="document.getElementById('debug-panel').style.display='none'" style="margin-top:8px;background:transparent;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Cerrar</button>
+  </div>
+
   <div style="margin-bottom:1.5rem;">
     <div id="phase-display" class="phase-badge phase-1">🟢 Fase 1 — Déficit agresivo</div>
     <p style="font-size:13px;color:var(--text-muted);margin-top:6px;" id="phase-sub">Meses 1–6 · Garmin: -0,5 kg/sem · 40%P / 35%C / 25%G</p>
@@ -1047,32 +1053,62 @@ const DATA_KEY = 'recomposicion_data';
 let _cache = null;
 let _db = null;
 
+function dbLog(msg, color) {
+  const panel = document.getElementById('debug-panel');
+  const log = document.getElementById('debug-log');
+  if (panel && log) {
+    panel.style.display = 'block';
+    const line = document.createElement('div');
+    line.style.color = color || '#00ff88';
+    line.textContent = new Date().toTimeString().slice(0,8) + ' ' + msg;
+    log.appendChild(line);
+  }
+  console.log('[Firebase]', msg);
+}
+
 async function getDb() {
   if (_db) return _db;
-  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-  const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-  const firebaseConfig = {
-    apiKey: "AIzaSyB5BhOD_R_fGN0kq_FxDcE1H53GHgToKBg",
-    authDomain: "recomposicion-hernan.firebaseapp.com",
-    projectId: "recomposicion-hernan",
-    storageBucket: "recomposicion-hernan.firebasestorage.app",
-    messagingSenderId: "275822733354",
-    appId: "1:275822733354:web:d6292dcda0afee90b73b53"
-  };
-  const app = initializeApp(firebaseConfig);
-  _db = { db: getFirestore(app), doc, getDoc, setDoc };
-  return _db;
+  try {
+    dbLog('Importando Firebase SDK...');
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+    dbLog('SDK importado OK ✓');
+    const firebaseConfig = {
+      apiKey: "AIzaSyB5BhOD_R_fGN0kq_FxDcE1H53GHgToKBg",
+      authDomain: "recomposicion-hernan.firebaseapp.com",
+      projectId: "recomposicion-hernan",
+      storageBucket: "recomposicion-hernan.firebasestorage.app",
+      messagingSenderId: "275822733354",
+      appId: "1:275822733354:web:d6292dcda0afee90b73b53"
+    };
+    const app = initializeApp(firebaseConfig);
+    _db = { db: getFirestore(app), doc, getDoc, setDoc };
+    dbLog('App inicializada: ' + firebaseConfig.projectId + ' ✓');
+    return _db;
+  } catch(e) {
+    dbLog('ERROR getDb: ' + e.message, '#ff4444');
+    throw e;
+  }
 }
 
 async function loadData() {
   if (_cache) return _cache;
   try {
+    dbLog('Conectando a Firestore...');
     const { db, doc, getDoc } = await getDb();
+    dbLog('Leyendo documento users/' + DATA_KEY + '...');
     const snap = await getDoc(doc(db, 'users', DATA_KEY));
-    _cache = snap.exists() ? snap.data().payload : {};
+    if (snap.exists()) {
+      _cache = snap.data().payload;
+      dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
+    } else {
+      _cache = {};
+      dbLog('Documento vacío — primera vez ✓');
+    }
     setSyncStatus(true);
   } catch(e) {
-    console.warn('Firebase error, using localStorage fallback:', e);
+    dbLog('ERROR loadData: ' + e.message, '#ff4444');
+    dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
     setSyncStatus(false);
     try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
     catch(e2) { _cache = {}; }
@@ -1084,10 +1120,13 @@ async function saveData(data) {
   _cache = data;
   try {
     const { db, doc, setDoc } = await getDb();
+    dbLog('Guardando datos...');
     await setDoc(doc(db, 'users', DATA_KEY), { payload: data });
+    dbLog('Guardado OK ✓');
     setSyncStatus(true);
   } catch(e) {
-    console.warn('Firebase save error, using localStorage fallback:', e);
+    dbLog('ERROR saveData: ' + e.message, '#ff4444');
+    dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
     setSyncStatus(false);
     try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch(e2) {}
   }
