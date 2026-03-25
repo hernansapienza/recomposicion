@@ -567,6 +567,10 @@
   <div class="nav-brand">
     💪 RecomposiciónApp <span>Hernan · 2026</span>
   </div>
+  <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px;">
+    <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
+    <span id="sync-text">conectando...</span>
+  </div>
   <button class="hamburger" id="hamburgerBtn" onclick="toggleMenu()">
     <div></div><div></div><div></div>
   </button>
@@ -1040,14 +1044,61 @@
 
 <script>
 const DATA_KEY = 'recomposicion_data';
+let _cache = null;
+let _db = null;
 
-function loadData() {
-  try { return JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
-  catch(e) { return {}; }
+async function getDb() {
+  if (_db) return _db;
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+  const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+  const firebaseConfig = {
+    apiKey: "AIzaSyB5BhOD_R_fGN0kq_FxDcE1H53GHgToKBg",
+    authDomain: "recomposicion-hernan.firebaseapp.com",
+    projectId: "recomposicion-hernan",
+    storageBucket: "recomposicion-hernan.firebasestorage.app",
+    messagingSenderId: "275822733354",
+    appId: "1:275822733354:web:d6292dcda0afee90b73b53"
+  };
+  const app = initializeApp(firebaseConfig);
+  _db = { db: getFirestore(app), doc, getDoc, setDoc };
+  return _db;
 }
 
-function saveData(data) {
-  localStorage.setItem(DATA_KEY, JSON.stringify(data));
+async function loadData() {
+  if (_cache) return _cache;
+  try {
+    const { db, doc, getDoc } = await getDb();
+    const snap = await getDoc(doc(db, 'users', DATA_KEY));
+    _cache = snap.exists() ? snap.data().payload : {};
+    setSyncStatus(true);
+  } catch(e) {
+    console.warn('Firebase error, using localStorage fallback:', e);
+    setSyncStatus(false);
+    try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
+    catch(e2) { _cache = {}; }
+  }
+  return _cache;
+}
+
+async function saveData(data) {
+  _cache = data;
+  try {
+    const { db, doc, setDoc } = await getDb();
+    await setDoc(doc(db, 'users', DATA_KEY), { payload: data });
+    setSyncStatus(true);
+  } catch(e) {
+    console.warn('Firebase save error, using localStorage fallback:', e);
+    setSyncStatus(false);
+    try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch(e2) {}
+  }
+}
+
+function setSyncStatus(online) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot) return;
+  dot.style.background = online ? '#4ade80' : '#f87171';
+  txt.textContent = online ? 'sincronizado' : 'sin conexión';
 }
 
 function showToast(msg = '✓ Guardado') {
@@ -1067,14 +1118,14 @@ function toggleMenu() {
   hb.classList.toggle('open');
 }
 
-function showSection(name) {
+async function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   event.currentTarget.classList.add('active');
   toggleMenu();
-  if (name === 'evolucion') renderWeightChart();
-  if (name === 'gym') renderDeloadAlert();
+  if (name === 'evolucion') await renderWeightChart();
+  if (name === 'gym') await renderDeloadAlert();
 }
 
 /* ── GYM DATA ── */
@@ -1108,8 +1159,8 @@ const CORE = {
   C: ['Russian Twists con Peso — 3×15/lado', 'Elevación Piernas Colgado — 3×10–12'],
 };
 
-function renderGym() {
-  const data = loadData();
+async function renderGym() {
+  const data = await loadData();
   const gymDone = data.gymDone || {};
 
   ['A','B','C'].forEach(sess => {
@@ -1142,13 +1193,13 @@ function renderGym() {
   });
 }
 
-function toggleGymExercise(sess, idx) {
-  const data = loadData();
+async function toggleGymExercise(sess, idx) {
+  const data = await loadData();
   if (!data.gymDone) data.gymDone = {};
   const key = `${sess}-${idx}`;
   data.gymDone[key] = !data.gymDone[key];
-  saveData(data);
-  renderGym();
+  await saveData(data);
+  await renderGym();
 }
 
 function switchGymTab(tab, el) {
@@ -1159,16 +1210,16 @@ function switchGymTab(tab, el) {
 }
 
 /* ── DELOAD ── */
-function saveWeeks() {
+async function saveWeeks() {
   const w = parseInt(document.getElementById('weeks-trained').value) || 0;
-  const data = loadData();
+  const data = await loadData();
   data.weeksTrained = w;
-  saveData(data);
-  renderDeloadAlert();
+  await saveData(data);
+  await renderDeloadAlert();
 }
 
-function renderDeloadAlert() {
-  const data = loadData();
+async function renderDeloadAlert() {
+  const data = await loadData();
   const w = data.weeksTrained || 0;
   document.getElementById('weeks-trained').value = w;
   const box = document.getElementById('deload-alert-box');
@@ -1185,8 +1236,8 @@ function renderDeloadAlert() {
 }
 
 /* ── PESOS POR EJERCICIO ── */
-function renderPesosTable(sess) {
-  const data = loadData();
+async function renderPesosTable(sess) {
+  const data = await loadData();
   const pesos = data.pesos || {};
   const el = document.getElementById('pesos-table-' + sess);
   el.innerHTML = `<table class="data-table" style="width:100%;">
@@ -1204,8 +1255,8 @@ function renderPesosTable(sess) {
   </table>`;
 }
 
-function savePesos() {
-  const data = loadData();
+async function savePesos() {
+  const data = await loadData();
   if (!data.pesos) data.pesos = {};
   ['A','B','C'].forEach(sess => {
     EXERCISES[sess].forEach((ex, i) => {
@@ -1217,13 +1268,13 @@ function savePesos() {
       }
     });
   });
-  saveData(data);
-  renderPesos();
+  await saveData(data);
+  await renderPesos();
   showToast('✓ Pesos guardados');
 }
 
-function renderPesos() {
-  ['A','B','C'].forEach(sess => renderPesosTable(sess));
+async function renderPesos() {
+  for (const sess of ['A','B','C']) { await renderPesosTable(sess); }
 }
 
 function switchPesosTab(tab, el) {
@@ -1360,14 +1411,14 @@ function updateSem(id, val, color, label, status) {
   el.querySelector('.semaphore-status').textContent = status;
 }
 
-function saveGarminBase() {
-  const data = loadData();
+async function saveGarminBase() {
+  const data = await loadData();
   data.rhrBase = parseInt(document.getElementById('g-rhr-base').value) || 0;
-  saveData(data);
+  await saveData(data);
 }
 
-function saveGarminDay() {
-  const data = loadData();
+async function saveGarminDay() {
+  const data = await loadData();
   const today = new Date().toISOString().split('T')[0];
   if (!data.garminHistory) data.garminHistory = {};
   data.garminHistory[today] = {
@@ -1377,14 +1428,14 @@ function saveGarminDay() {
     prot: parseInt(document.getElementById('g-prot').value) || null,
   };
   data.rhrBase = parseInt(document.getElementById('g-rhr-base').value) || data.rhrBase;
-  saveData(data);
+  await saveData(data);
   updateSemaphore();
-  syncDashboardSemaphore();
+  await syncDashboardSemaphore();
   showToast('✓ Métricas guardadas');
 }
 
-function syncDashboardSemaphore() {
-  const data = loadData();
+async function syncDashboardSemaphore() {
+  const data = await loadData();
   const today = new Date().toISOString().split('T')[0];
   const d = data.garminHistory && data.garminHistory[today];
   if (!d) return;
@@ -1412,20 +1463,20 @@ const PROJECTION = [
 
 let weightChart = null;
 
-function addWeightEntry() {
+async function addWeightEntry() {
   const val = parseFloat(document.getElementById('peso-hoy').value);
   if (!val || val < 40 || val > 200) { showToast('Ingresá un peso válido'); return; }
-  const data = loadData();
+  const data = await loadData();
   if (!data.weightLog) data.weightLog = [];
   const today = new Date().toISOString().split('T')[0];
   const existing = data.weightLog.findIndex(e => e.date === today);
   if (existing >= 0) data.weightLog[existing].weight = val;
   else data.weightLog.push({ date: today, weight: val });
   data.weightLog.sort((a, b) => a.date.localeCompare(b.date));
-  saveData(data);
+  await saveData(data);
   updateDashboardWeight(val);
-  renderWeightChart();
-  renderMonthlyRegister();
+  await renderWeightChart();
+  await renderMonthlyRegister();
   document.getElementById('peso-hoy').value = '';
   showToast('✓ Peso registrado');
 }
@@ -1442,8 +1493,8 @@ function updateDashboardWeight(w) {
   document.getElementById('progress-label').textContent = `${perdida.toFixed(1)} kg perdidos de 18 kg totales`;
 }
 
-function renderWeightChart() {
-  const data = loadData();
+async function renderWeightChart() {
+  const data = await loadData();
   const log = data.weightLog || [];
 
   const projLabels = PROJECTION.map(p => p.month);
@@ -1501,8 +1552,8 @@ function renderWeightChart() {
   });
 }
 
-function renderMonthlyRegister() {
-  const data = loadData();
+async function renderMonthlyRegister() {
+  const data = await loadData();
   const el = document.getElementById('monthly-register');
   el.innerHTML = '';
   PROJECTION.forEach((p, i) => {
@@ -1523,17 +1574,17 @@ function renderMonthlyRegister() {
   });
 }
 
-function saveMonthlyWeight(i) {
-  const data = loadData();
+async function saveMonthlyWeight(i) {
+  const data = await loadData();
   if (!data.monthlyWeights) data.monthlyWeights = {};
   data.monthlyWeights[i] = document.getElementById('mw-' + i).value;
-  saveData(data);
-  renderMonthlyRegister();
-  renderWeightChart();
+  await saveData(data);
+  await renderMonthlyRegister();
+  await renderWeightChart();
 }
 
 /* ── TODAY CHECKLIST ── */
-function renderTodayChecklist() {
+async function renderTodayChecklist() {
   const today = new Date().getDay();
   const schedule = {
     1: { label: 'Lunes — Gym (Sesión A)', items: ['Desayuno transportable', 'Almuerzo del trabajo', 'Batido whey pre-gym (17 hs)', 'Gym — Sesión A', 'Cena proteína + carbos + verduras', 'Creatina 5 g', 'Supradyn Magnesio'] },
@@ -1546,7 +1597,7 @@ function renderTodayChecklist() {
   };
 
   const dayPlan = schedule[today] || schedule[1];
-  const data = loadData();
+  const data = await loadData();
   const todayStr = new Date().toISOString().split('T')[0];
   const done = data.todayChecklist && data.todayChecklist[todayStr] ? data.todayChecklist[todayStr] : {};
 
@@ -1564,27 +1615,37 @@ function renderTodayChecklist() {
   });
 }
 
-function toggleTodayItem(i) {
-  const data = loadData();
+async function toggleTodayItem(i) {
+  const data = await loadData();
   const todayStr = new Date().toISOString().split('T')[0];
   if (!data.todayChecklist) data.todayChecklist = {};
   if (!data.todayChecklist[todayStr]) data.todayChecklist[todayStr] = {};
   data.todayChecklist[todayStr][i] = !data.todayChecklist[todayStr][i];
-  saveData(data);
-  renderTodayChecklist();
+  await saveData(data);
+  await renderTodayChecklist();
 }
 
 /* ── INIT ── */
-function init() {
-  const data = loadData();
-  renderGym();
-  renderPesos();
+async function init() {
+  const data = await loadData();
+
+  // Pre-load weight entries for Hernan
+  if (!data.weightLog || data.weightLog.length === 0) {
+    data.weightLog = [
+      { date: '2026-03-15', weight: 87.9 },
+      { date: '2026-03-21', weight: 87.1 },
+    ];
+    await saveData(data);
+  }
+
+  await renderGym();
+  await renderPesos();
   renderProteinCards();
-  renderTodayChecklist();
-  renderMonthlyRegister();
-  renderDeloadAlert();
+  await renderTodayChecklist();
+  await renderMonthlyRegister();
+  await renderDeloadAlert();
   calcMacros();
-  syncDashboardSemaphore();
+  await syncDashboardSemaphore();
 
   if (data.rhrBase) document.getElementById('g-rhr-base').value = data.rhrBase;
 
@@ -1600,6 +1661,7 @@ function init() {
 
   const lastWeight = data.weightLog && data.weightLog.length > 0 ? data.weightLog[data.weightLog.length - 1].weight : 88;
   updateDashboardWeight(lastWeight);
+  await renderWeightChart();
 }
 
 init();
