@@ -12,6 +12,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Recomposición Corporal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
@@ -1066,13 +1068,9 @@ function dbLog(msg, color) {
   console.log('[Firebase]', msg);
 }
 
-async function getDb() {
+function initFirebase() {
   if (_db) return _db;
   try {
-    dbLog('Importando Firebase SDK...');
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-    dbLog('SDK importado OK ✓');
     const firebaseConfig = {
       apiKey: "AIzaSyB5BhOD_R_fGN0kq_FxDcE1H53GHgToKBg",
       authDomain: "recomposicion-hernan.firebaseapp.com",
@@ -1081,13 +1079,13 @@ async function getDb() {
       messagingSenderId: "275822733354",
       appId: "1:275822733354:web:d6292dcda0afee90b73b53"
     };
-    const app = initializeApp(firebaseConfig);
-    _db = { db: getFirestore(app), doc, getDoc, setDoc };
-    dbLog('App inicializada: ' + firebaseConfig.projectId + ' ✓');
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    _db = firebase.firestore();
+    dbLog('Firebase inicializado OK ✓');
     return _db;
   } catch(e) {
-    dbLog('ERROR getDb: ' + e.message, '#ff4444');
-    throw e;
+    dbLog('ERROR initFirebase: ' + e.message, '#ff4444');
+    return null;
   }
 }
 
@@ -1097,10 +1095,11 @@ async function loadData() {
   _loadPromise = (async () => {
     try {
       dbLog('Conectando a Firestore...');
-      const { db, doc, getDoc } = await getDb();
-      dbLog('Leyendo documento users/' + DATA_KEY + '...');
-      const snap = await getDoc(doc(db, 'users', DATA_KEY));
-      if (snap.exists()) {
+      const db = initFirebase();
+      if (!db) throw new Error('No se pudo inicializar Firebase');
+      dbLog('Leyendo documento...');
+      const snap = await db.collection('users').doc(DATA_KEY).get();
+      if (snap.exists) {
         _cache = snap.data().payload || {};
         dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
       } else {
@@ -1123,9 +1122,10 @@ async function loadData() {
 async function saveData(data) {
   _cache = data;
   try {
-    const { db, doc, setDoc } = await getDb();
+    const db = initFirebase();
+    if (!db) throw new Error('No se pudo inicializar Firebase');
     dbLog('Guardando datos...');
-    await setDoc(doc(db, 'users', DATA_KEY), { payload: data });
+    await db.collection('users').doc(DATA_KEY).set({ payload: data });
     dbLog('Guardado OK ✓');
     setSyncStatus(true);
   } catch(e) {
