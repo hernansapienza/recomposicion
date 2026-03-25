@@ -1092,30 +1092,32 @@ async function getDb() {
 }
 
 async function loadData() {
-  if (_cacheLoaded && _cache) return _cache;
-  try {
-    dbLog('Conectando a Firestore...');
-    const { db, doc, getDoc } = await getDb();
-    dbLog('Leyendo documento users/' + DATA_KEY + '...');
-    const snap = await getDoc(doc(db, 'users', DATA_KEY));
-    if (snap.exists()) {
-      _cache = snap.data().payload;
-      _cacheLoaded = true;
-      dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
-    } else {
-      _cache = {};
-      _cacheLoaded = true;
-      dbLog('Documento vacío — primera vez ✓');
+  if (_cache !== null) return _cache;
+  if (_loadPromise) return _loadPromise;
+  _loadPromise = (async () => {
+    try {
+      dbLog('Conectando a Firestore...');
+      const { db, doc, getDoc } = await getDb();
+      dbLog('Leyendo documento users/' + DATA_KEY + '...');
+      const snap = await getDoc(doc(db, 'users', DATA_KEY));
+      if (snap.exists()) {
+        _cache = snap.data().payload || {};
+        dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
+      } else {
+        _cache = {};
+        dbLog('Documento vacío — primera vez ✓');
+      }
+      setSyncStatus(true);
+    } catch(e) {
+      dbLog('ERROR loadData: ' + e.message, '#ff4444');
+      dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
+      setSyncStatus(false);
+      try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
+      catch(e2) { _cache = {}; }
     }
-    setSyncStatus(true);
-  } catch(e) {
-    dbLog('ERROR loadData: ' + e.message, '#ff4444');
-    dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
-    setSyncStatus(false);
-    try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
-    catch(e2) { _cache = {}; }
-  }
-  return _cache;
+    return _cache;
+  })();
+  return _loadPromise;
 }
 
 async function saveData(data) {
@@ -1124,7 +1126,6 @@ async function saveData(data) {
     const { db, doc, setDoc } = await getDb();
     dbLog('Guardando datos...');
     await setDoc(doc(db, 'users', DATA_KEY), { payload: data });
-    _cacheLoaded = true;
     dbLog('Guardado OK ✓');
     setSyncStatus(true);
   } catch(e) {
