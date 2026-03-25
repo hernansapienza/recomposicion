@@ -1092,7 +1092,7 @@ async function getDb() {
 }
 
 async function loadData() {
-  if (_cache) return _cache;
+  if (_cacheLoaded && _cache) return _cache;
   try {
     dbLog('Conectando a Firestore...');
     const { db, doc, getDoc } = await getDb();
@@ -1100,9 +1100,11 @@ async function loadData() {
     const snap = await getDoc(doc(db, 'users', DATA_KEY));
     if (snap.exists()) {
       _cache = snap.data().payload;
+      _cacheLoaded = true;
       dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
     } else {
       _cache = {};
+      _cacheLoaded = true;
       dbLog('Documento vacío — primera vez ✓');
     }
     setSyncStatus(true);
@@ -1122,6 +1124,7 @@ async function saveData(data) {
     const { db, doc, setDoc } = await getDb();
     dbLog('Guardando datos...');
     await setDoc(doc(db, 'users', DATA_KEY), { payload: data });
+    _cacheLoaded = true;
     dbLog('Guardado OK ✓');
     setSyncStatus(true);
   } catch(e) {
@@ -1668,13 +1671,16 @@ async function toggleTodayItem(i) {
 async function init() {
   const data = await loadData();
 
-  // Pre-load weight entries for Hernan
-  if (!data.weightLog || data.weightLog.length === 0) {
+  // Pre-load weight entries only if Firebase has no data at all
+  const isFirstTime = Object.keys(data).length === 0;
+  if (isFirstTime) {
+    dbLog('Primera vez — cargando datos iniciales...');
     data.weightLog = [
       { date: '2026-03-15', weight: 87.9 },
       { date: '2026-03-21', weight: 87.1 },
     ];
     await saveData(data);
+    dbLog('Datos iniciales guardados en Firebase ✓');
   }
 
   await renderGym();
