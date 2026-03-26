@@ -12,8 +12,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Recomposición Corporal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
@@ -569,9 +567,9 @@
   <div class="nav-brand">
     💪 RecomposiciónApp <span>Hernan · 2026</span>
   </div>
-  <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px;">
-    <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#6B7280;display:inline-block;"></span>
-    <span id="sync-text">conectando...</span>
+  <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:5px;">
+    <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:#FCD34D;display:inline-block;"></span>
+    <span id="sync-text">cargando...</span>
   </div>
   <button class="hamburger" id="hamburgerBtn" onclick="toggleMenu()">
     <div></div><div></div><div></div>
@@ -587,11 +585,9 @@
   </div>
   <div class="nav-section-label">Entrenamiento</div>
   <div class="nav-item" onclick="showSection('gym')">
-    <span class="nav-icon">🏋️</span> Rutina Gym
+    <span class="nav-icon">🏋️</span> Rutina y Registros
   </div>
-  <div class="nav-item" onclick="showSection('pesos')">
-    <span class="nav-icon">📈</span> Registro de Pesos
-  </div>
+
   <div class="nav-section-label">Nutrición</div>
   <div class="nav-item" onclick="showSection('calculadora')">
     <span class="nav-icon">🧮</span> Calculadora Macros
@@ -612,12 +608,6 @@
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
 <div class="section active" id="section-dashboard">
-
-  <div id="debug-panel" style="background:#1a1a2e;color:#00ff88;font-family:'DM Mono',monospace;font-size:11px;padding:12px;border-radius:8px;margin-bottom:1rem;display:none;">
-    <div style="color:#fff;font-weight:600;margin-bottom:6px;font-size:12px;">🔧 Firebase Debug</div>
-    <div id="debug-log" style="line-height:1.8;"></div>
-    <button onclick="document.getElementById('debug-panel').style.display='none'" style="margin-top:8px;background:transparent;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Cerrar</button>
-  </div>
 
   <div style="margin-bottom:1.5rem;">
     <div id="phase-display" class="phase-badge phase-1">🟢 Fase 1 — Déficit agresivo</div>
@@ -715,84 +705,28 @@
     <button class="tab" onclick="switchGymTab('C', this)">Sesión C · Sábado</button>
   </div>
 
-  <div id="gym-A" class="gym-session">
-    <div class="card">
-      <div class="card-title">Calentamiento</div>
-      <ul style="list-style:none;font-size:13px;color:var(--text-muted);">
-        <li style="padding:4px 0;">• Rotación hombros — 10 rep</li>
-        <li style="padding:4px 0;">• Band pull-apart — 15 rep</li>
-        <li style="padding:4px 0;">• Círculos de codo</li>
-        <li style="padding:4px 0;">• Press con banda — 15 rep</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="card-title">Ejercicios — Sesión A</div>
-      <div id="checklist-A"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Core</div>
-      <div id="core-A"></div>
+  <div id="gym-A" class="gym-session"></div>
+  <div id="gym-B" class="gym-session" style="display:none"></div>
+  <div id="gym-C" class="gym-session" style="display:none"></div>
+
+  <!-- PROGRESS MODAL -->
+  <div id="progress-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;padding:1rem;overflow-y:auto;">
+    <div style="background:var(--white);border-radius:var(--radius);max-width:600px;margin:2rem auto;padding:1.25rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div style="font-size:15px;font-weight:600;" id="modal-title">Progresión</div>
+        <button onclick="closeProgressModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">×</button>
+      </div>
+      <div style="position:relative;width:100%;height:260px;">
+        <canvas id="progressChart"></canvas>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--text-muted);">
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:#1E3A5F;border-radius:2px;display:inline-block;"></span>Volumen (kg×reps)</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:#16A34A;border-radius:2px;display:inline-block;"></span>Peso máximo (kg)</span>
+      </div>
+      <div style="margin-top:1rem;max-height:200px;overflow-y:auto;" id="modal-history"></div>
     </div>
   </div>
 
-  <div id="gym-B" class="gym-session" style="display:none">
-    <div class="card">
-      <div class="card-title">Calentamiento</div>
-      <ul style="list-style:none;font-size:13px;color:var(--text-muted);">
-        <li style="padding:4px 0;">• Face pulls con banda — 15 rep</li>
-        <li style="padding:4px 0;">• Rotación de hombro</li>
-        <li style="padding:4px 0;">• Movilidad torácica</li>
-        <li style="padding:4px 0;">• Círculos de muñeca</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="card-title">Ejercicios — Sesión B</div>
-      <div id="checklist-B"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Core</div>
-      <div id="core-B"></div>
-    </div>
-  </div>
-
-  <div id="gym-C" class="gym-session" style="display:none">
-    <div class="card">
-      <div class="card-title">Calentamiento</div>
-      <ul style="list-style:none;font-size:13px;color:var(--text-muted);">
-        <li style="padding:4px 0;">• Rotación hombros</li>
-        <li style="padding:4px 0;">• Band pull-apart — 15 rep</li>
-        <li style="padding:4px 0;">• Movilidad codo/muñeca</li>
-        <li style="padding:4px 0;">• Press con banda — 15 rep</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="card-title">Ejercicios — Sesión C</div>
-      <div id="checklist-C"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Core</div>
-      <div id="core-C"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ═══════════════════════════════ PESOS ═══════════════════════════════ -->
-<div class="section" id="section-pesos">
-  <div class="card">
-    <div class="card-title">Registro de pesos por ejercicio</div>
-    <div class="tab-bar" style="margin-bottom:0.75rem;">
-      <button class="tab active" onclick="switchPesosTab('A',this)">Sesión A</button>
-      <button class="tab" onclick="switchPesosTab('B',this)">Sesión B</button>
-      <button class="tab" onclick="switchPesosTab('C',this)">Sesión C</button>
-    </div>
-    <div id="pesos-table-A"></div>
-    <div id="pesos-table-B" style="display:none"></div>
-    <div id="pesos-table-C" style="display:none"></div>
-    <div style="margin-top:12px;">
-      <button class="btn btn-primary btn-sm" onclick="savePesos()">Guardar pesos</button>
-    </div>
-  </div>
 </div>
 
 <!-- ═══════════════════════════════ CALCULADORA ═══════════════════════════════ -->
@@ -1051,98 +985,58 @@
 <div class="toast" id="toast">✓ Guardado</div>
 
 <script>
+const API = 'https://script.google.com/macros/s/AKfycbzYAapSYSZcOWN2Dxb6SaZGCJ3lPw8T67tnwbzM3dSUFIYpBR7DmGpty6CGOQDTkUyz_g/exec';
 const DATA_KEY = 'recomposicion_data';
 let _cache = null;
-let _db = null;
 
-function dbLog(msg, color) {
-  const panel = document.getElementById('debug-panel');
-  const log = document.getElementById('debug-log');
-  if (panel && log) {
-    panel.style.display = 'block';
-    const line = document.createElement('div');
-    line.style.color = color || '#00ff88';
-    line.textContent = new Date().toTimeString().slice(0,8) + ' ' + msg;
-    log.appendChild(line);
-  }
-  console.log('[Firebase]', msg);
-}
-
-function initFirebase() {
-  if (_db) return _db;
-  try {
-    const firebaseConfig = {
-      apiKey: "AIzaSyB5BhOD_R_fGN0kq_FxDcE1H53GHgToKBg",
-      authDomain: "recomposicion-hernan.firebaseapp.com",
-      projectId: "recomposicion-hernan",
-      storageBucket: "recomposicion-hernan.firebasestorage.app",
-      messagingSenderId: "275822733354",
-      appId: "1:275822733354:web:d6292dcda0afee90b73b53"
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    _db = firebase.firestore();
-    dbLog('Firebase inicializado OK ✓');
-    return _db;
-  } catch(e) {
-    dbLog('ERROR initFirebase: ' + e.message, '#ff4444');
-    return null;
-  }
+function setSyncStatus(state) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot) return;
+  const states = {
+    loading: { color: '#FCD34D', text: 'sincronizando...' },
+    ok:      { color: '#4ADE80', text: 'sincronizado ✓' },
+    err:     { color: '#F87171', text: 'sin conexión' },
+  };
+  const s = states[state] || states.err;
+  dot.style.background = s.color;
+  txt.textContent = s.text;
 }
 
 async function loadData() {
   if (_cache !== null) return _cache;
-  if (_loadPromise) return _loadPromise;
-  _loadPromise = (async () => {
-    try {
-      dbLog('Conectando a Firestore...');
-      const db = initFirebase();
-      if (!db) throw new Error('No se pudo inicializar Firebase');
-      dbLog('Leyendo documento...');
-      const snap = await db.collection('users').doc(DATA_KEY).get();
-      if (snap.exists) {
-        _cache = snap.data().payload || {};
-        dbLog('Datos cargados OK ✓ (' + JSON.stringify(_cache).length + ' bytes)');
-      } else {
-        _cache = {};
-        dbLog('Documento vacío — primera vez ✓');
-      }
-      setSyncStatus(true);
-    } catch(e) {
-      dbLog('ERROR loadData: ' + e.message, '#ff4444');
-      dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
-      setSyncStatus(false);
-      try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
-      catch(e2) { _cache = {}; }
-    }
-    return _cache;
-  })();
-  return _loadPromise;
+  setSyncStatus('loading');
+  try {
+    const res = await fetch(API + '?action=get');
+    const text = await res.text();
+    _cache = (text && text.trim() !== '{}' && text.trim() !== '') ? JSON.parse(text) : {};
+    try { localStorage.setItem(DATA_KEY, JSON.stringify(_cache)); } catch(e) {}
+    setSyncStatus('ok');
+  } catch(e) {
+    console.warn('Sheets unavailable, using localStorage:', e);
+    try { _cache = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; }
+    catch(e2) { _cache = {}; }
+    setSyncStatus('err');
+  }
+  return _cache;
 }
 
 async function saveData(data) {
   _cache = data;
+  try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch(e) {}
+  setSyncStatus('loading');
   try {
-    const db = initFirebase();
-    if (!db) throw new Error('No se pudo inicializar Firebase');
-    dbLog('Guardando datos...');
-    await db.collection('users').doc(DATA_KEY).set({ payload: data });
-    dbLog('Guardado OK ✓');
-    setSyncStatus(true);
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    setSyncStatus('ok');
   } catch(e) {
-    dbLog('ERROR saveData: ' + e.message, '#ff4444');
-    dbLog('Código: ' + (e.code || 'desconocido'), '#ffaa00');
-    setSyncStatus(false);
-    try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch(e2) {}
+    console.warn('Sheets save error:', e);
+    setSyncStatus('err');
   }
 }
 
-function setSyncStatus(online) {
-  const dot = document.getElementById('sync-dot');
-  const txt = document.getElementById('sync-text');
-  if (!dot) return;
-  dot.style.background = online ? '#4ade80' : '#f87171';
-  txt.textContent = online ? 'sincronizado' : 'sin conexión';
-}
 
 function showToast(msg = '✓ Guardado') {
   const t = document.getElementById('toast');
@@ -1174,25 +1068,115 @@ async function showSection(name) {
 /* ── GYM DATA ── */
 const EXERCISES = {
   A: [
-    { name: 'Press Banca Plano con Barra', sets: '5×5–6', rir: 'RIR 2–3' },
-    { name: 'Lat Pulldown', sets: '4×8–10', rir: 'RIR 2–3' },
-    { name: 'Press Inclinado Mancuernas 30°', sets: '3×10–12', rir: 'RIR 2–3' },
-    { name: 'Elevaciones Laterales', sets: '3×15', rir: 'RIR 2–3' },
-    { name: 'Curl Bíceps con Barra', sets: '3×10–12', rir: 'RIR 2–3' },
+    {
+      name: 'Press Banca Plano con Barra',
+      sets: '5×5–6', rir: 'RIR 2–3',
+      principales: 'Pectoral mayor (porción esternal)',
+      secundarios: 'Tríceps, deltoides anterior',
+      ejecucion: 'Agarre prono ligeramente más ancho que hombros. Bajar la barra hasta rozar el pecho con control (~2 seg). Empujar explosivo. Codos a 45–75° del cuerpo, no abiertos. Escápulas retraídas durante todo el movimiento.',
+    },
+    {
+      name: 'Lat Pulldown',
+      sets: '4×8–10', rir: 'RIR 2–3',
+      principales: 'Dorsal ancho, teres mayor',
+      secundarios: 'Bíceps, romboides, trapecio inferior',
+      ejecucion: 'Agarre prono, ancho de hombros o ligeramente más. Tirar la barra hacia el pecho llevando los codos hacia abajo y atrás. Contraer el dorsal en la posición baja. Subir con control sin que los hombros se eleven.',
+    },
+    {
+      name: 'Press Inclinado Mancuernas 30°',
+      sets: '3×10–12', rir: 'RIR 2–3',
+      principales: 'Pectoral mayor (porción clavicular)',
+      secundarios: 'Deltoides anterior, tríceps',
+      ejecucion: 'Banco a 30°. Mancuernas alineadas con el pecho medio-alto. Bajar con control manteniendo los codos a 45°. Empujar convergiendo levemente las mancuernas en la cima sin trabarlas.',
+    },
+    {
+      name: 'Elevaciones Laterales',
+      sets: '3×15', rir: 'RIR 2–3',
+      principales: 'Deltoides medial',
+      secundarios: 'Deltoides anterior, trapecio superior',
+      ejecucion: 'Codos ligeramente flexionados. Elevar los brazos hasta la altura del hombro en el plano escapular (levemente adelantado). Pulgar levemente hacia abajo (como vertiendo agua). Bajar con control en 2–3 seg.',
+    },
+    {
+      name: 'Curl Bíceps con Barra',
+      sets: '3×10–12', rir: 'RIR 2–3',
+      principales: 'Bíceps braquial, braquial',
+      secundarios: 'Braquiorradial, supinador',
+      ejecucion: 'Agarre supino, ancho de caderas. Codos fijos al costado del tronco. Subir la barra hasta contraer completo. Bajar con control en 3 seg. No balancear el torso.',
+    },
   ],
   B: [
-    { name: 'Press Militar con Barra (OHP)', sets: '5×5–6', rir: 'RIR 2–3' },
-    { name: 'Seated Cable Row', sets: '4×8–10', rir: 'RIR 2–3' },
-    { name: 'Cable Crossover Low', sets: '3×12–15', rir: 'RIR 2–3' },
-    { name: 'Hammer Curl', sets: '3×10–12', rir: 'RIR 2–3' },
-    { name: 'Extensión Tríceps Sobre Cabeza', sets: '3×10–12', rir: 'RIR 2–3' },
+    {
+      name: 'Press Militar con Barra (OHP)',
+      sets: '5×5–6', rir: 'RIR 2–3',
+      principales: 'Deltoides anterior y medial',
+      secundarios: 'Tríceps, trapecio, serrato anterior',
+      ejecucion: 'De pie o sentado. Barra a la altura de la clavícula, agarre prono ligeramente más ancho que hombros. Empujar verticalmente extendiendo codos. En la cima, encoger levemente los trapecios para bloquear. Bajar con control.',
+    },
+    {
+      name: 'Seated Cable Row',
+      sets: '4×8–10', rir: 'RIR 2–3',
+      principales: 'Dorsal ancho, romboides, trapecio medio',
+      secundarios: 'Bíceps, deltoides posterior, erectores',
+      ejecucion: 'Sentado, pies apoyados. Tirar el agarre hacia el abdomen bajo llevando los codos atrás. Retracción completa de escápulas al final. Mantener torso vertical. Volver con control dejando que las escápulas se abran.',
+    },
+    {
+      name: 'Cable Crossover Low',
+      sets: '3×12–15', rir: 'RIR 2–3',
+      principales: 'Pectoral mayor (porción clavicular)',
+      secundarios: 'Deltoides anterior, coracobraquial',
+      ejecucion: 'Poleas en posición baja. Tirar hacia arriba y al frente convergiendo las manos a la altura del pecho. Leve flexión de codos constante. Estiramiento controlado al volver. Pecho hacia adelante durante todo el recorrido.',
+    },
+    {
+      name: 'Hammer Curl',
+      sets: '3×10–12', rir: 'RIR 2–3',
+      principales: 'Braquial, braquiorradial',
+      secundarios: 'Bíceps braquial (porción larga)',
+      ejecucion: 'Agarre neutro (martillo), palmas enfrentadas. Codos fijos al costado. Subir alternado o simultáneo. Contracción completa arriba. Bajar controlado en 2–3 seg. No rotar la muñeca durante el recorrido.',
+    },
+    {
+      name: 'Extensión Tríceps Sobre Cabeza',
+      sets: '3×10–12', rir: 'RIR 2–3',
+      principales: 'Tríceps (porción larga)',
+      secundarios: 'Tríceps (porciones medial y lateral)',
+      ejecucion: 'Mancuerna o polea sobre la cabeza. Codos apuntando al techo, fijos. Bajar el peso detrás de la cabeza hasta estiramiento completo del tríceps. Extender hasta casi bloquear. Movimiento lento en la bajada.',
+    },
   ],
   C: [
-    { name: 'Cable Crossover High', sets: '4×12–15', rir: 'RIR 2–3' },
-    { name: 'Pull-Down Agarre Neutro', sets: '4×8–10', rir: 'RIR 2–3' },
-    { name: 'Pullover Polea/Mancuerna', sets: '3×12', rir: 'RIR 2–3' },
-    { name: 'Face Pulls en Polea', sets: '3×15', rir: 'RIR 2–3' },
-    { name: 'Pushdown con Cuerda', sets: '3×12–15', rir: 'RIR 2–3' },
+    {
+      name: 'Cable Crossover High',
+      sets: '4×12–15', rir: 'RIR 2–3',
+      principales: 'Pectoral mayor (porción esternal inferior)',
+      secundarios: 'Deltoides anterior, serrato anterior',
+      ejecucion: 'Poleas en posición alta. Tirar hacia abajo y al frente convergiendo manos a la altura del abdomen. Leve flexión de codos constante. Control total en la vuelta para mantener tensión.',
+    },
+    {
+      name: 'Pull-Down Agarre Neutro',
+      sets: '4×8–10', rir: 'RIR 2–3',
+      principales: 'Dorsal ancho, teres mayor',
+      secundarios: 'Bíceps, braquial, romboides',
+      ejecucion: 'Agarre neutro paralelo (palmas enfrentadas). Tirar hacia el pecho llevando los codos hacia abajo y atrás. Contracción del dorsal en la posición baja. Subir controlado sin elevar hombros.',
+    },
+    {
+      name: 'Pullover Polea/Mancuerna',
+      sets: '3×12', rir: 'RIR 2–3',
+      principales: 'Dorsal ancho, pectoral mayor (porción esternal)',
+      secundarios: 'Teres mayor, tríceps (porción larga), serrato',
+      ejecucion: 'Acostado en banco o de pie en polea. Brazos extendidos, leve flexión de codos. Tirar desde atrás de la cabeza hacia las caderas en arco. Mantener core firme. Estiramiento máximo al inicio del recorrido.',
+    },
+    {
+      name: 'Face Pulls en Polea',
+      sets: '3×15', rir: 'RIR 2–3',
+      principales: 'Deltoides posterior, rotadores externos',
+      secundarios: 'Romboides, trapecio medio',
+      ejecucion: 'Polea alta con cuerda. Tirar hacia la cara separando las manos al final (posición de "doble bíceps"). Codos a la altura de los hombros o más arriba. Mantener la posición contraída 1 seg. Fundamental para salud del manguito rotador.',
+    },
+    {
+      name: 'Pushdown con Cuerda',
+      sets: '3×12–15', rir: 'RIR 2–3',
+      principales: 'Tríceps (porciones medial y lateral)',
+      secundarios: 'Tríceps (porción larga)',
+      ejecucion: 'Polea alta con cuerda. Codos fijos al costado del torso. Empujar hacia abajo separando la cuerda al final para extensión completa. Subir controlado hasta 90° de flexión. No balancear los codos.',
+    },
   ]
 };
 
@@ -1202,38 +1186,121 @@ const CORE = {
   C: ['Russian Twists con Peso — 3×15/lado', 'Elevación Piernas Colgado — 3×10–12'],
 };
 
+let progressChartInstance = null;
+
 async function renderGym() {
   const data = await loadData();
   const gymDone = data.gymDone || {};
+  const gymLog = data.gymLog || {};
 
   ['A','B','C'].forEach(sess => {
-    const el = document.getElementById('checklist-' + sess);
-    const coreEl = document.getElementById('core-' + sess);
+    const el = document.getElementById('gym-' + sess);
+    if (!el) return;
     el.innerHTML = '';
-    coreEl.innerHTML = '';
 
+    // Warmup card
+    const warmups = {
+      A: ['Rotación hombros — 10 rep', 'Band pull-apart — 15 rep', 'Círculos de codo', 'Press con banda — 15 rep'],
+      B: ['Face pulls con banda — 15 rep', 'Rotación de hombro', 'Movilidad torácica', 'Círculos de muñeca'],
+      C: ['Rotación hombros', 'Band pull-apart — 15 rep', 'Movilidad codo/muñeca', 'Press con banda — 15 rep'],
+    };
+    const wCard = document.createElement('div');
+    wCard.className = 'card';
+    wCard.innerHTML = '<div class="card-title">Calentamiento</div>' +
+      warmups[sess].map(w => `<div style="padding:5px 0;font-size:13px;color:var(--text-muted);border-bottom:1px solid var(--border);">• ${w}</div>`).join('');
+    el.appendChild(wCard);
+
+    // Exercise cards
     EXERCISES[sess].forEach((ex, i) => {
       const key = `${sess}-${i}`;
       const done = gymDone[key];
-      const div = document.createElement('div');
-      div.className = 'check-item' + (done ? ' done' : '');
-      div.onclick = () => toggleGymExercise(sess, i);
-      div.innerHTML = `
-        <div class="check-box">${done ? '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>' : ''}</div>
-        <div style="flex:1;">
-          <div class="check-name">${ex.name}</div>
-          <div class="check-detail">${ex.sets} · ${ex.rir}</div>
+      const today = new Date().toISOString().split('T')[0];
+      const todayLog = gymLog[key] && gymLog[key][today] ? gymLog[key][today] : {};
+      const lastLog = getLastLog(gymLog, key, today);
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.cssText = 'border-left:4px solid ' + (done ? 'var(--green)' : 'var(--border)') + ';';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:15px;">${ex.name}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${ex.sets} · ${ex.rir}</div>
+          </div>
+          <button onclick="toggleGymExercise('${sess}',${i})" style="background:${done?'var(--green)':'var(--gray-light)'};border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:${done?'white':'var(--text-muted)'};cursor:pointer;white-space:nowrap;margin-left:8px;">
+            ${done ? '✓ Hecho' : 'Marcar'}
+          </button>
+        </div>
+
+        <div style="background:var(--gray-light);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;font-size:12px;">
+          <div style="margin-bottom:4px;"><span style="font-weight:600;color:var(--navy);">Músculos principales:</span> <span style="color:var(--text-muted);">${ex.principales}</span></div>
+          <div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--navy);">Secundarios:</span> <span style="color:var(--text-muted);">${ex.secundarios}</span></div>
+          <div style="color:var(--text-muted);line-height:1.5;">${ex.ejecucion}</div>
+        </div>
+
+        ${lastLog ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;padding:6px 8px;background:var(--navy-light);border-radius:6px;">
+          📅 Última vez: <strong>${lastLog.weight} kg × ${lastLog.reps} reps × ${lastLog.series} series</strong> (${lastLog.date})
+        </div>` : ''}
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em;">Peso (kg)</div>
+            <input type="number" step="0.5" id="log-w-${key}" value="${todayLog.weight||''}" placeholder="${lastLog?lastLog.weight:'0'}"
+              style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center;"
+              onchange="saveExerciseLog('${sess}',${i})">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em;">Reps</div>
+            <input type="number" id="log-r-${key}" value="${todayLog.reps||''}" placeholder="${lastLog?lastLog.reps:'0'}"
+              style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center;"
+              onchange="saveExerciseLog('${sess}',${i})">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em;">Series</div>
+            <input type="number" id="log-s-${key}" value="${todayLog.series||''}" placeholder="${lastLog?lastLog.series:'0'}"
+              style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center;"
+              onchange="saveExerciseLog('${sess}',${i})">
+          </div>
+          <button onclick="showProgressModal('${sess}',${i})"
+            style="padding:7px 10px;background:var(--navy-light);border:1px solid var(--navy);border-radius:6px;font-size:12px;color:var(--navy);cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">
+            📈
+          </button>
         </div>`;
-      el.appendChild(div);
+      el.appendChild(card);
     });
 
-    CORE[sess].forEach(ex => {
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:8px 0;font-size:13px;border-bottom:1px solid var(--border);color:var(--text-muted);';
-      div.textContent = '• ' + ex;
-      coreEl.appendChild(div);
-    });
+    // Core card
+    const coreCard = document.createElement('div');
+    coreCard.className = 'card';
+    coreCard.innerHTML = '<div class="card-title">Core</div>' +
+      CORE[sess].map(c => `<div style="padding:6px 0;font-size:13px;color:var(--text-muted);border-bottom:1px solid var(--border);">• ${c}</div>`).join('');
+    el.appendChild(coreCard);
   });
+}
+
+function getLastLog(gymLog, key, excludeDate) {
+  if (!gymLog[key]) return null;
+  const dates = Object.keys(gymLog[key]).filter(d => d !== excludeDate).sort().reverse();
+  if (!dates.length) return null;
+  return { ...gymLog[key][dates[0]], date: dates[0] };
+}
+
+async function saveExerciseLog(sess, idx) {
+  const key = `${sess}-${idx}`;
+  const w = document.getElementById('log-w-' + key)?.value;
+  const r = document.getElementById('log-r-' + key)?.value;
+  const s = document.getElementById('log-s-' + key)?.value;
+  if (!w && !r && !s) return;
+  const data = await loadData();
+  if (!data.gymLog) data.gymLog = {};
+  if (!data.gymLog[key]) data.gymLog[key] = {};
+  const today = new Date().toISOString().split('T')[0];
+  data.gymLog[key][today] = {
+    weight: parseFloat(w) || 0,
+    reps: parseInt(r) || 0,
+    series: parseInt(s) || 0,
+  };
+  await saveData(data);
 }
 
 async function toggleGymExercise(sess, idx) {
@@ -1246,10 +1313,116 @@ async function toggleGymExercise(sess, idx) {
 }
 
 function switchGymTab(tab, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#section-gym .tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('.gym-session').forEach(s => s.style.display = 'none');
   document.getElementById('gym-' + tab).style.display = 'block';
+}
+
+async function showProgressModal(sess, idx) {
+  const key = `${sess}-${idx}`;
+  const ex = EXERCISES[sess][idx];
+  const data = await loadData();
+  const gymLog = data.gymLog || {};
+  const log = gymLog[key] || {};
+  const dates = Object.keys(log).sort();
+
+  document.getElementById('modal-title').textContent = '📈 ' + ex.name;
+  document.getElementById('progress-modal').style.display = 'block';
+
+  if (progressChartInstance) { progressChartInstance.destroy(); progressChartInstance = null; }
+
+  if (dates.length === 0) {
+    document.getElementById('modal-history').innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:1rem;">Aún no hay registros para este ejercicio.</p>';
+    return;
+  }
+
+  const volumes = dates.map(d => Math.round(log[d].weight * log[d].reps * log[d].series));
+  const maxWeights = dates.map(d => log[d].weight);
+  const labels = dates.map(d => {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'});
+  });
+
+  const canvas = document.getElementById('progressChart');
+  progressChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Volumen (kg×reps×series)',
+          data: volumes,
+          borderColor: '#1E3A5F',
+          backgroundColor: 'rgba(30,58,95,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#1E3A5F',
+          tension: 0.3,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Peso máximo (kg)',
+          data: maxWeights,
+          borderColor: '#16A34A',
+          backgroundColor: 'rgba(22,163,74,0.08)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#16A34A',
+          tension: 0.3,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          type: 'linear', position: 'left',
+          ticks: { font: { size: 10 }, callback: v => v + ' vol' },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        y2: {
+          type: 'linear', position: 'right',
+          ticks: { font: { size: 10 }, callback: v => v + ' kg' },
+          grid: { drawOnChartArea: false }
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  // History table
+  const rows = dates.slice().reverse().map(d => {
+    const e = log[d];
+    const vol = Math.round(e.weight * e.reps * e.series);
+    return `<tr>
+      <td style="padding:6px 8px;font-size:12px;color:var(--text-muted);">${d}</td>
+      <td style="padding:6px 8px;font-size:13px;font-family:'DM Mono';">${e.weight} kg</td>
+      <td style="padding:6px 8px;font-size:13px;font-family:'DM Mono';">${e.reps} reps</td>
+      <td style="padding:6px 8px;font-size:13px;font-family:'DM Mono';">${e.series} series</td>
+      <td style="padding:6px 8px;font-size:13px;font-family:'DM Mono';color:var(--navy);">${vol}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('modal-history').innerHTML = `
+    <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Historial</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr style="background:var(--gray-light);">
+        <th style="padding:5px 8px;font-size:11px;text-align:left;color:var(--text-muted);">Fecha</th>
+        <th style="padding:5px 8px;font-size:11px;text-align:left;color:var(--text-muted);">Peso</th>
+        <th style="padding:5px 8px;font-size:11px;text-align:left;color:var(--text-muted);">Reps</th>
+        <th style="padding:5px 8px;font-size:11px;text-align:left;color:var(--text-muted);">Series</th>
+        <th style="padding:5px 8px;font-size:11px;text-align:left;color:var(--text-muted);">Volumen</th>
+      </tr>
+      ${rows}
+    </table>`;
+}
+
+function closeProgressModal() {
+  document.getElementById('progress-modal').style.display = 'none';
+  if (progressChartInstance) { progressChartInstance.destroy(); progressChartInstance = null; }
 }
 
 /* ── DELOAD ── */
@@ -1266,64 +1439,15 @@ async function renderDeloadAlert() {
   const w = data.weeksTrained || 0;
   document.getElementById('weeks-trained').value = w;
   const box = document.getElementById('deload-alert-box');
-  const nextDeload = w === 0 ? 'en 2 semanas' : w < 2 ? `en ${2 - w} semana(s)` : w === 2 || w === 4 || w === 6 || w === 8 || w === 10 || w === 12 ? '¡Esta semana!' : 'no todavía';
   const isDeload = w > 0 && w % 2 === 0;
   box.innerHTML = `<div class="deload-alert ${isDeload ? 'deload-warn' : 'deload-ok'}">
     <span class="deload-alert-icon">${isDeload ? '⚠️' : '✅'}</span>
     <div>
       <div style="font-weight:600;">${isDeload ? 'Semana de DELOAD — reducí volumen al 50%' : 'Semana de entrenamiento normal'}</div>
-      <div style="font-size:12px;opacity:0.8;">${isDeload ? 'Pesos al 60–70% · Series 2–3 · RIR 4–5 · Running normal' : 'Próximo deload: ' + nextDeload}</div>
+      <div style="font-size:12px;opacity:0.8;">${isDeload ? 'Pesos al 60–70% · Series 2–3 · RIR 4–5 · Running normal' : 'Próximo deload: semana ' + (Math.ceil((w+1)/2)*2)}</div>
     </div>
   </div>`;
-  document.getElementById('deload-next-text').textContent = isDeload ? '⚠️ Semana de deload activa' : `Próximo deload en semana ${Math.ceil(w/2)*2 + (w%2===0&&w>0?0:2-w%2) + (w===0?2:0)}`;
-}
-
-/* ── PESOS POR EJERCICIO ── */
-async function renderPesosTable(sess) {
-  const data = await loadData();
-  const pesos = data.pesos || {};
-  const el = document.getElementById('pesos-table-' + sess);
-  el.innerHTML = `<table class="data-table" style="width:100%;">
-    <tr><th>Ejercicio</th><th>Semana anterior</th><th>Esta semana</th></tr>
-    ${EXERCISES[sess].map((ex, i) => {
-      const key = `${sess}-${i}`;
-      const prev = pesos[key + '-prev'] || '';
-      const curr = pesos[key + '-curr'] || '';
-      return `<tr>
-        <td style="font-size:13px;">${ex.name}</td>
-        <td style="font-size:12px;color:var(--text-muted);font-family:'DM Mono';">${prev || '—'}</td>
-        <td><input class="exercise-input" type="text" id="peso-${key}" value="${curr}" placeholder="ej: 60 kg"></td>
-      </tr>`;
-    }).join('')}
-  </table>`;
-}
-
-async function savePesos() {
-  const data = await loadData();
-  if (!data.pesos) data.pesos = {};
-  ['A','B','C'].forEach(sess => {
-    EXERCISES[sess].forEach((ex, i) => {
-      const key = `${sess}-${i}`;
-      const inp = document.getElementById('peso-' + key);
-      if (inp) {
-        data.pesos[key + '-prev'] = data.pesos[key + '-curr'] || '';
-        data.pesos[key + '-curr'] = inp.value;
-      }
-    });
-  });
-  await saveData(data);
-  await renderPesos();
-  showToast('✓ Pesos guardados');
-}
-
-async function renderPesos() {
-  for (const sess of ['A','B','C']) { await renderPesosTable(sess); }
-}
-
-function switchPesosTab(tab, el) {
-  document.querySelectorAll('#section-pesos .tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  ['A','B','C'].forEach(s => { document.getElementById('pesos-table-' + s).style.display = s === tab ? 'block' : 'none'; });
+  document.getElementById('deload-next-text').textContent = isDeload ? '⚠️ Semana de deload activa' : `Próximo deload en semana ${Math.ceil((w+1)/2)*2}`;
 }
 
 /* ── CALCULADORA ── */
@@ -1685,7 +1809,6 @@ async function init() {
   }
 
   await renderGym();
-  await renderPesos();
   renderProteinCards();
   await renderTodayChecklist();
   await renderMonthlyRegister();
