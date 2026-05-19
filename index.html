@@ -537,28 +537,68 @@ function setStatus(state, msg) {
 // ══════════════════════════════════════════════════════════════════
 // API — Google Sheets via Apps Script
 // ══════════════════════════════════════════════════════════════════
-// GET → lecturas (sin CORS issues)
-async function apiGet(action) {
-  const url = SCRIPT_URL + "?action=" + action;
-  const res = await fetch(url, { redirect: "follow" });
-  const text = await res.text();
-  try { return JSON.parse(text); }
-  catch(e) { console.error("apiGet parse error:", text); throw e; }
+// ── API via JSONP (única técnica que funciona con Apps Script + CORS) ──
+// Lecturas: JSONP con tag <script> — sin restricciones CORS
+// Escrituras: fetch con no-cors + imagen de pixel para confirmar
+
+let _jsonpCallbacks = {};
+
+function jsonpGet(action) {
+  return new Promise((resolve, reject) => {
+    const cbName = "_cb_" + action + "_" + Date.now();
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      delete _jsonpCallbacks[cbName];
+      document.body.removeChild(script);
+      reject(new Error("JSONP timeout: " + action));
+    }, 15000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+
+    script.src = SCRIPT_URL + "?action=" + action + "&callback=" + cbName;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error("JSONP script error: " + action));
+    };
+    document.body.appendChild(script);
+  });
 }
 
-// POST con FormData → escrituras (evita preflight CORS)
+// Escrituras: GET con todos los parámetros en la URL (Apps Script los lee de e.parameter)
 async function apiCall(action, payload={}) {
-  const form = new FormData();
-  form.append("action", action);
-  form.append("payload", JSON.stringify(payload));
-  const res = await fetch(SCRIPT_URL, {
-    method: "POST",
-    body: form,
-    redirect: "follow",
+  const params = new URLSearchParams({ action, payload: JSON.stringify(payload) });
+  const cbName = "_cb_" + action + "_" + Date.now();
+  params.append("callback", cbName);
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      if(document.body.contains(script)) document.body.removeChild(script);
+      reject(new Error("Timeout: " + action));
+    }, 15000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(document.body.contains(script)) document.body.removeChild(script);
+      resolve(data);
+    };
+
+    script.src = SCRIPT_URL + "?" + params.toString();
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error("Script error: " + action));
+    };
+    document.body.appendChild(script);
   });
-  const text = await res.text();
-  try { return JSON.parse(text); }
-  catch(e) { console.error("apiCall parse error:", text); throw e; }
 }
 
 async function loadAll() {
@@ -569,8 +609,8 @@ async function loadAll() {
   setStatus("loading","Cargando datos...");
   try {
     const [wRes, pRes] = await Promise.all([
-      apiGet("getWeeks"),
-      apiGet("getPesajes"),
+      jsonpGet("getWeeks"),
+      jsonpGet("getPesajes"),
     ]);
     weeks    = wRes.data || [];
     weighIns = pRes.data || [];
@@ -578,7 +618,7 @@ async function loadAll() {
     setStatus("ok", `Conectado · ${weeks.length} semanas · ${weighIns.length} pesajes`);
   } catch(e) {
     console.error("loadAll error:", e);
-    setStatus("error","Error al cargar. Abrí consola (F12) para ver el detalle.");
+    setStatus("error","Error al cargar: " + e.message);
   }
 }
 
