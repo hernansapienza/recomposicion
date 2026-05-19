@@ -537,14 +537,28 @@ function setStatus(state, msg) {
 // ══════════════════════════════════════════════════════════════════
 // API — Google Sheets via Apps Script
 // ══════════════════════════════════════════════════════════════════
-async function apiCall(action, payload={}) {
+// GET → lecturas (sin CORS issues)
+async function apiGet(action) {
   const url = SCRIPT_URL + "?action=" + action;
-  const res  = await fetch(url, {
+  const res = await fetch(url, { redirect: "follow" });
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { console.error("apiGet parse error:", text); throw e; }
+}
+
+// POST con FormData → escrituras (evita preflight CORS)
+async function apiCall(action, payload={}) {
+  const form = new FormData();
+  form.append("action", action);
+  form.append("payload", JSON.stringify(payload));
+  const res = await fetch(SCRIPT_URL, {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload),
+    body: form,
+    redirect: "follow",
   });
-  return res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { console.error("apiCall parse error:", text); throw e; }
 }
 
 async function loadAll() {
@@ -555,15 +569,16 @@ async function loadAll() {
   setStatus("loading","Cargando datos...");
   try {
     const [wRes, pRes] = await Promise.all([
-      apiCall("getWeeks"),
-      apiCall("getPesajes"),
+      apiGet("getWeeks"),
+      apiGet("getPesajes"),
     ]);
     weeks    = wRes.data || [];
     weighIns = pRes.data || [];
     renderAll();
     setStatus("ok", `Conectado · ${weeks.length} semanas · ${weighIns.length} pesajes`);
   } catch(e) {
-    setStatus("error","Error al cargar datos. Revisá el SCRIPT_URL.");
+    console.error("loadAll error:", e);
+    setStatus("error","Error al cargar. Abrí consola (F12) para ver el detalle.");
   }
 }
 
