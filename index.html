@@ -320,9 +320,9 @@
           <div class="chart-box-header">
             <span class="chart-box-title">Macronutrientes semanales (g/día promedio)</span>
             <div class="chart-legend">
-              <span style="--c:#6366f1"><span style="background:#6366f1;width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Proteína</span>
-              <span><span style="background:#38bdf8;width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Carbos</span>
-              <span><span style="background:#f87171;width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Grasas</span>
+              <span style="--c:#6366f1"><span style="background:rgba(148,111,246,0.9);width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Proteína</span>
+              <span><span style="background:rgba(75,202,218,0.9);width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Carbos</span>
+              <span><span style="background:rgba(249,156,67,0.9);width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Grasas</span>
             </div>
           </div>
           <canvas id="chartMacros" height="180"></canvas>
@@ -333,8 +333,8 @@
           <div class="chart-box-header">
             <span class="chart-box-title">Calorías semanales</span>
             <div class="chart-legend">
-              <span><span style="background:#3b82f6;width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Reposo</span>
-              <span><span style="background:#ef4444;width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Actividad</span>
+              <span><span style="background:rgba(59,130,246,0.55);border:1px solid rgba(59,130,246,0.85);width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Reposo</span>
+              <span><span style="background:rgba(234,88,12,0.55);border:1px solid rgba(234,88,12,0.85);width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px;"></span>Actividad</span>
               <span><span style="background:#fbbf24;width:10px;height:2px;display:inline-block;margin-right:4px;margin-bottom:2px;"></span>Consumidas</span>
               <span><span style="background:#22c55e;width:10px;height:2px;display:inline-block;margin-right:4px;margin-bottom:2px;border-top:2px dashed #22c55e;border-bottom:none;height:0px;"></span>Déficit</span>
             </div>
@@ -865,9 +865,9 @@ function renderCharts() {
     data:{
       labels,
       datasets:[
-        {label:"Proteína",data:sw.map(w=>n(w.protein)||null),backgroundColor:"rgba(79,110,247,0.9)",stack:"macro"},
-        {label:"Carbos",  data:sw.map(w=>n(w.carbs)||null),  backgroundColor:"rgba(6,182,212,0.88)",stack:"macro"},
-        {label:"Grasas",  data:sw.map(w=>n(w.fat)||null),    backgroundColor:"rgba(239,68,68,0.85)",stack:"macro"},
+        {label:"Proteína",data:sw.map(w=>n(w.protein)||null),backgroundColor:"rgba(148,111,246,0.88)",stack:"macro"},
+        {label:"Carbos",  data:sw.map(w=>n(w.carbs)||null),  backgroundColor:"rgba(75,202,218,0.88)",stack:"macro"},
+        {label:"Grasas",  data:sw.map(w=>n(w.fat)||null),    backgroundColor:"rgba(249,156,67,0.88)",stack:"macro"},
       ]
     },
     options:{
@@ -891,18 +891,18 @@ function renderCharts() {
         {
           label:"Cal Reposo",
           data:sw.map(w=>n(w.calRest)||null),
-          backgroundColor:"rgba(59,130,246,0.85)",   // azul vivo
-          borderColor:"rgba(59,130,246,1)",
-          borderWidth:0,
+          backgroundColor:"rgba(59,130,246,0.45)",
+          borderColor:"rgba(59,130,246,0.85)",
+          borderWidth:1,
           stack:"burned", type:"bar",
           order:2,
         },
         {
           label:"Cal Actividad",
           data:sw.map(w=>n(w.calActive)||null),
-          backgroundColor:"rgba(239,68,68,0.85)",    // rojo vivo
-          borderColor:"rgba(239,68,68,1)",
-          borderWidth:0,
+          backgroundColor:"rgba(234,88,12,0.45)",
+          borderColor:"rgba(234,88,12,0.85)",
+          borderWidth:1,
           stack:"burned", type:"bar",
           borderRadius:{topLeft:4,topRight:4},
           order:2,
