@@ -516,8 +516,44 @@ let csvMapping = {};
 // ══════════════════════════════════════════════════════════════════
 // UTILS
 // ══════════════════════════════════════════════════════════════════
-const fmtS = iso => { if(!iso)return""; const d=new Date(iso+"T00:00:00"); return`${d.getDate()}/${d.getMonth()+1}`; };
-const fmtL = iso => { if(!iso)return""; const d=new Date(iso+"T00:00:00"); return d.toLocaleDateString("es-AR",{day:"2-digit",month:"short"}); };
+// Parsea fechas robustamente: YYYY-MM-DD, DD/MM/YYYY, timestamps, etc.
+function parseDate(val) {
+  if (!val || val === "") return null;
+  const s = String(val).trim();
+  // YYYY-MM-DD (ISO)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s + "T00:00:00");
+  // DD/MM/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+    const [d,m,y] = s.split("/");
+    return new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+  }
+  // MM/DD/YYYY (Google Sheets a veces exporta así)
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+    const parts = s.split("/");
+    return new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+  }
+  // Timestamp numérico de Google Sheets (días desde 1899-12-30)
+  if (/^\d+$/.test(s)) {
+    const ms = (parseInt(s) - 25569) * 86400000;
+    return new Date(ms);
+  }
+  // Fallback
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Normaliza cualquier fecha a string YYYY-MM-DD para comparar/ordenar
+function toISO(val) {
+  const d = parseDate(val);
+  if (!d) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
+const fmtS = val => { const d = parseDate(val); if(!d) return"?"; return`${d.getDate()}/${d.getMonth()+1}`; };
+const fmtL = val => { const d = parseDate(val); if(!d) return"?"; return d.toLocaleDateString("es-AR",{day:"2-digit",month:"short"}); };
 const n    = v  => parseFloat(v)||0;
 const pct  = (v,t) => t?Math.min(140,Math.round((n(v)/n(t))*100)):0;
 
@@ -634,8 +670,8 @@ function renderAll() {
 }
 
 function renderHeader() {
-  const sW = [...weighIns].sort((a,b)=>a.date<b.date?-1:1);
-  const sw  = [...weeks].sort((a,b)=>a.date<b.date?-1:1);
+  const sW = [...weighIns].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
+  const sw  = [...weeks].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
   const lastP = sW[sW.length-1];
   const prevP = sW[sW.length-2];
   const curW  = lastP?.weight || sw[sw.length-1]?.calRest; // fallback
@@ -673,8 +709,8 @@ function setCard(id, value, target, inv=false) {
 }
 
 function renderCards() {
-  const sw  = [...weeks].sort((a,b)=>a.date<b.date?-1:1);
-  const sW  = [...weighIns].sort((a,b)=>a.date<b.date?-1:1);
+  const sw  = [...weeks].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
+  const sW  = [...weighIns].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
   const last = sw[sw.length-1];
   const lastP= sW[sW.length-1];
   const cw   = n(lastP?.weight || 0);
@@ -727,12 +763,12 @@ const CHART_DEFAULTS = {
 function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
 
 function renderCharts() {
-  const sw = [...weeks].sort((a,b)=>a.date<b.date?-1:1);
+  const sw = [...weeks].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
 
   // Weight chart — all weighins merged with weekly
   const wMap = new Map();
-  [...weighIns].forEach(w=>{ if(w.weight)wMap.set(w.date,n(w.weight)); });
-  sw.forEach(w=>{ if(w.weight&&!wMap.has(w.date))wMap.set(w.date,n(w.weight)); });
+  [...weighIns].forEach(w=>{ if(w.weight)wMap.set(toISO(w.date),n(w.weight)); });
+  sw.forEach(w=>{ if(w.weight&&!wMap.has(toISO(w.date)))wMap.set(toISO(w.date),n(w.weight)); });
   const wData = [...wMap.entries()].sort((a,b)=>a[0]<b[0]?-1:1);
 
   destroyChart("peso");
@@ -816,7 +852,7 @@ function renderCharts() {
 // PESAJES
 // ══════════════════════════════════════════════════════════════════
 function renderPesajesList() {
-  const sorted = [...weighIns].sort((a,b)=>a.date<b.date?-1:1);
+  const sorted = [...weighIns].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
   const el = document.getElementById("pesajesList");
   if(!sorted.length){ el.innerHTML=`<p style="color:var(--text4);font-size:13px;text-align:center;padding:30px 0">No hay pesajes todavía.</p>`; return; }
   el.innerHTML = [...sorted].reverse().map((w,i,arr)=>{
@@ -841,8 +877,8 @@ async function savePesaje() {
   try {
     const res = await apiCall("addPesaje",{id:Date.now().toString(),date:fecha,weight:peso});
     if(res.ok){
-      weighIns.push({id:Date.now().toString(),date:fecha,weight:peso});
-      weighIns.sort((a,b)=>a.date<b.date?-1:1);
+      weighIns.push({id:Date.now().toString(),date:toISO(fecha),weight:peso});
+      weighIns.sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
       document.getElementById("pPeso").value="";
       renderAll();
       setStatus("ok","Pesaje guardado.");
@@ -925,9 +961,10 @@ async function saveWeek() {
     const action = editId ? "updateWeek" : "addWeek";
     const res = await apiCall(action, w);
     if(res.ok){
+      w.date = toISO(w.date); // normalizar formato
       if(editId) weeks = weeks.map(x=>x.id===editId?w:x);
       else weeks.push(w);
-      weeks.sort((a,b)=>a.date<b.date?-1:1);
+      weeks.sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
       cancelEdit();
       renderAll();
       setStatus("ok","Semana guardada.");
@@ -940,7 +977,7 @@ async function saveWeek() {
 // HISTORIAL
 // ══════════════════════════════════════════════════════════════════
 function renderHistorial() {
-  const sw = [...weeks].sort((a,b)=>a.date<b.date?-1:1);
+  const sw = [...weeks].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
   document.getElementById("historialCount").textContent = sw.length + " semanas";
   const el = document.getElementById("historialList");
   if(!sw.length){ el.innerHTML=`<p style="color:var(--text4);font-size:13px">Sin semanas registradas.</p>`; return; }
@@ -991,8 +1028,8 @@ async function deleteWeek(id) {
 // AI CHAT
 // ══════════════════════════════════════════════════════════════════
 function buildSysPrompt() {
-  const sw = [...weeks].sort((a,b)=>a.date<b.date?-1:1);
-  const sp = [...weighIns].sort((a,b)=>a.date<b.date?-1:1);
+  const sw = [...weeks].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
+  const sp = [...weighIns].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
   return `Sos un entrenador personal y nutricionista especializado en recomposición corporal.
 Usuario: hombre, plan 12 meses 89.6→70 kg. Lleva 2 meses, bajó a 84 kg. Pesos del gym subiendo.
 Objetivos: déficit ~495 kcal/día | proteína 175 g | carbos 154 g | grasas 49 g.
@@ -1099,7 +1136,7 @@ async function confirmCSV(){
   setStatus("loading",`Importando ${fresh.length} semanas...`);
   try {
     await apiCall("addWeeksBatch",{weeks:fresh});
-    weeks=[...weeks,...fresh].sort((a,b)=>a.date<b.date?-1:1);
+    weeks=[...weeks,...fresh].sort((a,b)=>toISO(a.date)<toISO(b.date)?-1:1);
     closeCSV();
     renderAll();
     setStatus("ok",`${fresh.length} semanas importadas.`);
